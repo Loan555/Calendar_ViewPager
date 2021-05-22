@@ -1,15 +1,12 @@
 package com.loan555.myviewpager.adapter
 
-import android.content.Context
 import android.graphics.Color
 import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.loan555.myviewpager.R
 import com.loan555.myviewpager.lastDoubleTabPosition
@@ -17,11 +14,11 @@ import com.loan555.myviewpager.lastSelectDateTime
 import com.loan555.myviewpager.model.CalendarDateModel
 import java.util.*
 import kotlin.collections.ArrayList
-import kotlin.coroutines.coroutineContext
 import kotlin.random.Random
 
 var oldClick = -1
 var boubleTabColor = Color.parseColor("#FFBB86FC")
+var checkClick = false
 
 class ItemAdapter(
     private var listData: ArrayList<CalendarDateModel>,
@@ -42,7 +39,6 @@ class ItemAdapter(
             itemView.setOnClickListener(this)
         }
 
-
         override fun onClick(v: View?) {
             val position: Int = layoutPosition
             if (position != RecyclerView.NO_POSITION) {
@@ -54,18 +50,24 @@ class ItemAdapter(
                     handler.postDelayed(r, 250);
                     Log.d("aaa", "click = $position")
                     lastSelectDateTime = listData[position]
-
+                    checkClick = true
                 } else if (i == 2) {
                     //Double click
                     i = 0;
-                    Log.d("aaa", "double click = $position")
-                    lastDoubleTabPosition = listData[position]
-                    boubleTabColor = Color.argb(
-                        255,
-                        Random.nextInt(256),
-                        Random.nextInt(256),
-                        Random.nextInt(256)
-                    )
+                    if (oldClick == position) {
+                        Log.d("aaa", "double click = $position")
+                        checkClick = false
+                        lastDoubleTabPosition = listData[position]
+                        boubleTabColor = Color.argb(
+                            255,
+                            Random.nextInt(256),
+                            Random.nextInt(256),
+                            Random.nextInt(256)
+                        )
+                    } else {
+                        Log.d("aaa", "click = $position")
+                        lastSelectDateTime = listData[position]
+                    }
                 }
                 if (oldClick != -1)
                     notifyItemChanged(oldClick, false)
@@ -87,7 +89,7 @@ class ItemAdapter(
         holder.textView.text = listData[position].data.date.toString()
         Log.d("aaa", "bind du lieu tai : $position")
         //ngay thang khac
-        if(listData[position].data.month != listData[9].data.month) {
+        if (listData[position].data.month != listData[9].data.month) {
             holder.textView.setTextColor(Color.parseColor("#5E888888"))
             Log.d(
                 "colorrr",
@@ -96,12 +98,12 @@ class ItemAdapter(
         }
         when (true) {
             //double tab
-            (oldClick == position && lastDoubleTabPosition.data.date == listData[position].data.date && lastDoubleTabPosition.data.month == listData[position].data.month && lastDoubleTabPosition.data.year == listData[position].data.year) -> {
+            (!checkClick && oldClick == position && lastDoubleTabPosition.data.date == listData[position].data.date && lastDoubleTabPosition.data.month == listData[position].data.month && lastDoubleTabPosition.data.year == listData[position].data.year) -> {
                 holder.textView.setBackgroundColor(boubleTabColor)
                 return
             }
             // click
-            (oldClick == position && lastSelectDateTime.data.date == listData[position].data.date && lastSelectDateTime.data.month == listData[position].data.month && lastSelectDateTime.data.year == listData[position].data.year) -> {
+            (checkClick && oldClick == position && lastSelectDateTime.data.date == listData[position].data.date && lastSelectDateTime.data.month == listData[position].data.month && lastSelectDateTime.data.year == listData[position].data.year) -> {
                 holder.textView.setBackgroundColor(Color.parseColor("#FF6200EE"))
                 Log.d(
                     "colorrr",

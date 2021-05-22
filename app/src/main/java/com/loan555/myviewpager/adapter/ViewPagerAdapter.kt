@@ -1,11 +1,9 @@
 package com.loan555.myviewpager.adapter
 
-import android.content.Context
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.loan555.myviewpager.*
@@ -43,7 +41,13 @@ class ViewPagerAdapter : RecyclerView.Adapter<ViewPagerVH>(), ItemAdapter.OnItem
 
                 name_item.text = "ViewPager+ $position"
                 mmmm_yyyy.text = SimpleDateFormat("MMMM yyyy").format(cal.time).toString()
-                img.setImageResource(R.drawable.bg_3)
+                when(cal.time.month){
+                    0,1,2 -> img.setImageResource(R.drawable.xuan)
+                    3,4,5 -> img.setImageResource(R.drawable.ha)
+                    6,7,8 -> img.setImageResource(R.drawable.thu)
+                    else -> img.setImageResource(R.drawable.dong)
+                }
+
                 container.setBackgroundResource(colors[position % 4])
 
                 /**Lay du lieu cho thang
