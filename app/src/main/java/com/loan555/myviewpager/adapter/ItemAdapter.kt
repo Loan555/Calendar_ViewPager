@@ -8,9 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.loan555.myviewpager.R
-import com.loan555.myviewpager.lastDoubleTabPosition
-import com.loan555.myviewpager.lastSelectDateTime
+import com.loan555.myviewpager.*
 import com.loan555.myviewpager.model.CalendarDateModel
 import java.util.*
 import kotlin.collections.ArrayList
@@ -41,9 +39,7 @@ class ItemAdapter(
 
         override fun onClick(v: View?) {
             val position: Int = layoutPosition
-            if (position != RecyclerView.NO_POSITION) {
-                listener.onItemClick(v, adapterPosition)
-
+            if (listData[position].data.month == listData[9].data.month && position != RecyclerView.NO_POSITION) {
                 i++
                 if (i == 1) {
                     //Single click
@@ -58,6 +54,7 @@ class ItemAdapter(
                         Log.d("aaa", "double click = $position")
                         checkClick = false
                         lastDoubleTabPosition = listData[position]
+                        listener.onItemClick(v, adapterPosition, listData[position])
                         boubleTabColor = Color.argb(
                             255,
                             Random.nextInt(256),
@@ -91,28 +88,20 @@ class ItemAdapter(
         //ngay thang khac
         if (listData[position].data.month != listData[9].data.month) {
             holder.textView.setTextColor(Color.parseColor("#5E888888"))
-            Log.d(
-                "colorrr",
-                "mau thangs khac position = $position ,${listData[position].data.date}/ ${listData[position].data.month + 1}"
-            )
         }
         when (true) {
             //double tab
-            (!checkClick && oldClick == position && lastDoubleTabPosition.data.date == listData[position].data.date && lastDoubleTabPosition.data.month == listData[position].data.month && lastDoubleTabPosition.data.year == listData[position].data.year) -> {
+            (!checkClick && listData[position].data.month == listData[9].data.month && lastDoubleTabPosition.data.date == listData[position].data.date && lastDoubleTabPosition.data.month == listData[position].data.month && lastDoubleTabPosition.data.year == listData[position].data.year) -> {
                 holder.textView.setBackgroundColor(boubleTabColor)
                 return
             }
             // click
-            (checkClick && oldClick == position && lastSelectDateTime.data.date == listData[position].data.date && lastSelectDateTime.data.month == listData[position].data.month && lastSelectDateTime.data.year == listData[position].data.year) -> {
+            (checkClick && listData[position].data.month == listData[9].data.month && lastSelectDateTime.data.date == listData[position].data.date && lastSelectDateTime.data.month == listData[position].data.month && lastSelectDateTime.data.year == listData[position].data.year) -> {
                 holder.textView.setBackgroundColor(Color.parseColor("#FF6200EE"))
-                Log.d(
-                    "colorrr",
-                    "---------------------mau click position = $position ,${listData[position].data.date}/ ${listData[position].data.month + 1}"
-                )
                 return
             }
             //today
-            (Calendar.getInstance().time.date == listData[position].data.date
+            (listData[position].data.month == listData[9].data.month && Calendar.getInstance().time.date == listData[position].data.date
                     && Calendar.getInstance().time.month == listData[position].data.month
                     && Calendar.getInstance().time.year == listData[position].data.year)
             -> {
@@ -133,7 +122,7 @@ class ItemAdapter(
     //-----------------
 
     interface OnItemClickListener {
-        fun onItemClick(v: View?, position: Int)
+        fun onItemClick(v: View?, position: Int, date: CalendarDateModel)
     }
 }
 

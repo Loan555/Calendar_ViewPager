@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.loan555.myviewpager.*
+import com.loan555.myviewpager.fragment.HomeFragment
 import com.loan555.myviewpager.model.CalendarDateModel
 import com.loan555.myviewpager.model.DataDateTime
 import kotlinx.android.synthetic.main.itempager.view.*
@@ -16,7 +17,7 @@ import kotlin.collections.ArrayList
 
 var startDayOfWeek = 0
 
-class ViewPagerAdapter : RecyclerView.Adapter<ViewPagerVH>(), ItemAdapter.OnItemClickListener {
+class ViewPagerAdapter(private var listener: OnInputNote) : RecyclerView.Adapter<ViewPagerVH>(), ItemAdapter.OnItemClickListener {
     //array of colors to change the background color of screen
     private val colors = intArrayOf(
         android.R.color.holo_blue_bright,
@@ -70,22 +71,8 @@ class ViewPagerAdapter : RecyclerView.Adapter<ViewPagerVH>(), ItemAdapter.OnItem
 
     override fun getItemCount(): Int = Int.MAX_VALUE
 
-    override fun onItemClick(v: View?, position: Int) {
-//        // neu check chua co thi them vao
-//        var check = false
-//        for (i in 0 until lastClickPositionPager.size) {
-//            if (lastClickPositionPager[i] == currentPosition) {
-//                check = true
-//                break
-//            }
-//        }
-//        if (!check) {
-//            lastClickPositionPager.add(currentPosition)
-//            Log.d(
-//                "aaa",
-//                "danh sach tuong tac la: ---------------- ${lastClickPositionPager.toString()}"
-//            )
-//        }// danh sach nay toan nhung trang da duoc tuong tac
+    override fun onItemClick(v: View?, position: Int, date: CalendarDateModel) {
+        listener.onInputDialog(date)
     }
 
     private fun setStartDayOdWeek() {
@@ -93,6 +80,10 @@ class ViewPagerAdapter : RecyclerView.Adapter<ViewPagerVH>(), ItemAdapter.OnItem
         for (i in 0..6) {
             arrDayOfWeek.add(SimpleDateFormat("EEE").format(arrDate[i].data.time).toString())
         }
+    }
+
+    interface OnInputNote{
+        fun onInputDialog(date: CalendarDateModel)
     }
 
 }
