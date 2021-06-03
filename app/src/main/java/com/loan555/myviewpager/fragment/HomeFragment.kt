@@ -15,16 +15,17 @@ import com.loan555.myviewpager.adapter.ViewPagerAdapter
 import com.loan555.myviewpager.adapter.startDayOfWeek
 import com.loan555.myviewpager.model.CalendarDateModel
 import com.loan555.myviewpager.model.DataNoteItem
+import com.loan555.myviewpager.model.DataNoteList
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_home.*
+import kotlinx.android.synthetic.main.fragment_to_do_list.*
 import java.text.SimpleDateFormat
 
 const val NOTE = "NOTE_KEY"
+const val NOTE_DATE = "NOTE_KEY_DATE"
 
-class HomeFragment : Fragment(), AdapterView.OnItemSelectedListener, ViewPagerAdapter.OnInputNote {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
+class HomeFragment(var dataNoteList: DataNoteList) : Fragment(), AdapterView.OnItemSelectedListener,
+    ViewPagerAdapter.OnInputNote {
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -52,6 +53,11 @@ class HomeFragment : Fragment(), AdapterView.OnItemSelectedListener, ViewPagerAd
         startDayOfWeek = 0
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
+    override fun onInputDialog(date: CalendarDateModel) {
+        showDialog(date)
+    }
+
     private fun initSpinner() {
         var mArrayAdapter = activity?.let {
             ArrayAdapter(
@@ -67,20 +73,18 @@ class HomeFragment : Fragment(), AdapterView.OnItemSelectedListener, ViewPagerAd
     }
 
     private fun initViewPager() {
-        val adapter = ViewPagerAdapter(this)
+        val adapter = ViewPagerAdapter(this, dataNoteList)
         view_pager2.adapter = adapter
         view_pager2.setCurrentItem(startPosition, false)
 
         view_pager2.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                Log.d("aabb", "onPageSelected + $position")
                 currentPosition = position
                 view_pager2.adapter?.notifyItemChanged(currentPosition, false)
             }
 
             override fun onPageScrollStateChanged(state: Int) {
                 super.onPageScrollStateChanged(state)
-                Log.d("aabb", "state scroll = $state")
             }
         })
     }
@@ -89,12 +93,12 @@ class HomeFragment : Fragment(), AdapterView.OnItemSelectedListener, ViewPagerAd
     private fun showDialog(date: CalendarDateModel) {
         val dialog = Dialog(this.requireContext())
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setCancelable(false)
-        dialog.setContentView(R.layout.input_note_dialog)
+        dialog.setContentView(R.layout.dialog_home)
 
         val closeBtn = dialog.findViewById(R.id.btn_close_dialog) as ImageButton
         val saveBtn = dialog.findViewById(R.id.btn_save_dialog) as TextView
         val detailBtn = dialog.findViewById(R.id.btn_detail_dialog) as TextView
+        val toListBtn = dialog.findViewById(R.id.btn_list_dialog) as TextView
         val textDate = dialog.findViewById(R.id.textDate) as TextView
         val editEventBody = dialog.findViewById(R.id.editTextBody) as EditText
         val editEventName = dialog.findViewById(R.id.name_event_dialog) as EditText
@@ -105,13 +109,8 @@ class HomeFragment : Fragment(), AdapterView.OnItemSelectedListener, ViewPagerAd
             val eName = editEventName.text.toString()
             val eBody = editEventBody.text.toString()
             if (eName != "" && eBody != "") {
-
-                Log.d(
-                    "aaa",
-                    "ban vua them $eName - $eBody - ${SimpleDateFormat("d MMMM yyyy").format(date.data.time)}"
-                )
-                val id = mDataNoteList.getNewId()
-                mDataNoteList.addItem(
+                val id = dataNoteList.getNewId()
+                val positionAdd = dataNoteList.addItem(
                     DataNoteItem(
                         id,
                         date,
@@ -119,15 +118,13 @@ class HomeFragment : Fragment(), AdapterView.OnItemSelectedListener, ViewPagerAd
                         eBody
                     )
                 ) // khong nen cho bien toan cuc vao day
-                mDataNoteList.sortByDateDescending()
-
                 dialog.dismiss()
-
                 Toast.makeText(
                     this.context,
-                    "Success id = $id",
+                    "Add : $positionAdd",
                     Toast.LENGTH_SHORT
                 ).show()
+                view_pager2.adapter?.notifyDataSetChanged()
             }
         }
         closeBtn.setOnClickListener {
@@ -137,14 +134,14 @@ class HomeFragment : Fragment(), AdapterView.OnItemSelectedListener, ViewPagerAd
         detailBtn.setOnClickListener {
             dialog.dismiss()
             Toast.makeText(this.requireContext(), "go to detail", Toast.LENGTH_SHORT).show()
-            val id = mDataNoteList.getNewId()
+            val id = dataNoteList.getNewId()
             val eName = editEventName.text.toString()
             val eBody = editEventBody.text.toString()
             val item = DataNoteItem(id, date, eName, eBody)
 
             val bundle = Bundle()
             bundle.putSerializable(NOTE, item)
-            val detailFragment = DetailFragment()
+            val detailFragment = DetailFragment(dataNoteList)
             detailFragment.arguments = bundle
 
             activity?.supportFragmentManager?.commit {
@@ -153,12 +150,16 @@ class HomeFragment : Fragment(), AdapterView.OnItemSelectedListener, ViewPagerAd
                 addToBackStack(DETAIL_TAG)
             }
         }
+        toListBtn.setOnClickListener {
+            dialog.dismiss()
+            activity?.supportFragmentManager?.commit {
+                val mToDoListFragment = ToDoListFragment(dataNoteList)
+                replace(R.id.fragment_view_main, mToDoListFragment)
+                setReorderingAllowed(true)
+                addToBackStack(LIST_TAG)
+            }
+        }
         dialog.show()
-    }
-
-    @RequiresApi(Build.VERSION_CODES.N)
-    override fun onInputDialog(date: CalendarDateModel) {
-        showDialog(date)
     }
 
 }

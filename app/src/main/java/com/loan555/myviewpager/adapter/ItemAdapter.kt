@@ -10,12 +10,13 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.loan555.myviewpager.*
 import com.loan555.myviewpager.model.CalendarDateModel
+import com.loan555.myviewpager.model.DataNoteList
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.random.Random
 
 var oldClick = -1
-var boubleTabColor = Color.parseColor("#FFBB86FC")
+var boubleTabColor = Color.parseColor("#AA66CC")
 var checkClick = false
 
 class ItemAdapter(
@@ -26,13 +27,19 @@ class ItemAdapter(
     val handler = Handler()
     val r = Runnable {
         i = 0
-        Log.d("rrrr", "runable ")
     }
+    //array of colors to change the background color of screen
+    private val colors = intArrayOf(
+        android.R.color.holo_blue_bright,
+        android.R.color.white,//day
+        android.R.color.holo_blue_dark, //color click
+        android.R.color.holo_purple,     //color today
+        android.R.color.holo_orange_dark     //color day have event
+    )
 
     inner class ViewHolder3(itemView: View) : RecyclerView.ViewHolder(itemView),
         View.OnClickListener {
         var textView: TextView = itemView.findViewById(R.id.item_text)
-
         init {
             itemView.setOnClickListener(this)
         }
@@ -68,7 +75,6 @@ class ItemAdapter(
                 }
                 if (oldClick != -1)
                     notifyItemChanged(oldClick, false)
-                Log.d("aaa", "--------------------notify xong nos di dau old click = $oldClick")
                 notifyItemChanged(position, false)
                 oldClick = position
             }
@@ -84,7 +90,6 @@ class ItemAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder3, position: Int) {
         holder.textView.text = listData[position].data.date.toString()
-        Log.d("aaa", "bind du lieu tai : $position")
         //ngay thang khac
         if (listData[position].data.month != listData[9].data.month) {
             holder.textView.setTextColor(Color.parseColor("#5E888888"))
@@ -97,7 +102,7 @@ class ItemAdapter(
             }
             // click
             (checkClick && listData[position].data.month == listData[9].data.month && lastSelectDateTime.data.date == listData[position].data.date && lastSelectDateTime.data.month == listData[position].data.month && lastSelectDateTime.data.year == listData[position].data.year) -> {
-                holder.textView.setBackgroundColor(Color.parseColor("#FF6200EE"))
+                holder.textView.setBackgroundColor(Color.parseColor("#0099CC"))
                 return
             }
             //today
@@ -105,12 +110,17 @@ class ItemAdapter(
                     && Calendar.getInstance().time.month == listData[position].data.month
                     && Calendar.getInstance().time.year == listData[position].data.year)
             -> {
-                holder.textView.setBackgroundColor(Color.parseColor("#FFBB86FC"))
+                holder.textView.setBackgroundColor(Color.parseColor("#AA66CC"))
+                return
+            }
+            //ngay co su kien
+            listData[position].haveEvent && listData[position].data.month == listData[9].data.month->{
+                holder.textView.setBackgroundColor(Color.parseColor("#FF8800"))
                 return
             }
             // ngay trong thang
             else -> {
-                holder.textView.setBackgroundColor(Color.parseColor("#FFFFFFFF"))
+                holder.textView.setBackgroundColor(Color.parseColor("#FFFFFF"))
             }
         }
     }

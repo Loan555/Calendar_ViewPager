@@ -2,4 +2,7 @@
     <string name="app_name">Calendar</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="backup_data">Backup database</string>
+    <string name="import_data">Import database</string>
+    <string name="backup_name">MyBackupAgent</string>
 </resources>

@@ -4,20 +4,19 @@ import android.app.DatePickerDialog
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.*
 import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import com.loan555.myviewpager.R
 import com.loan555.myviewpager.model.CalendarDateModel
 import com.loan555.myviewpager.model.DataNoteItem
+import com.loan555.myviewpager.model.DataNoteList
 import kotlinx.android.synthetic.main.fragment_detail.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-class DetailFragment : Fragment() {
+class DetailFragment(var dataNoteList: DataNoteList) : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +37,12 @@ class DetailFragment : Fragment() {
         eventBody()
     }
 
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.mymenu, menu)
+        menu.findItem(R.id.menu_search).isVisible = false
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
     private fun eventBody() {
         getDate()
         add()
@@ -52,7 +57,7 @@ class DetailFragment : Fragment() {
             editTextEventName.setText(data.titleHead)
             editTextBody.setText(data.titleBody)
             enterDate.text = SimpleDateFormat("dd/MM/yyyy").format(data.date.data)
-        }else
+        } else
             enterDate.text = SimpleDateFormat("dd/MM/yyyy").format(Calendar.getInstance().time)
     }
 
@@ -61,19 +66,21 @@ class DetailFragment : Fragment() {
             val date = SimpleDateFormat("dd/MM/yyyy").parse(enterDate.text.toString())
             val name = editTextEventName.text.toString()
             val body = editTextBody.text.toString()
-            val id = mDataNoteList.getNewId()
+            val id: Long = 0
             Log.d("aaa", "${SimpleDateFormat("dd MM yyyy").format(date)} + $name + $body")
 
             if (name == "" && body == "") {
                 Toast.makeText(this.requireContext(), "Null", Toast.LENGTH_SHORT).show()
             } else {
-                mDataNoteList.addItem(
+                val positionAdd = dataNoteList.addItem(
                     DataNoteItem(
                         id,
-                        CalendarDateModel(date), name, body
+                        CalendarDateModel(date,true), name, body
                     )
                 )
-                Toast.makeText(this.requireContext(), "Add $id", Toast.LENGTH_SHORT).show()
+                if (positionAdd != -1)
+                    Toast.makeText(this.requireContext(), "Add $positionAdd", Toast.LENGTH_SHORT)
+                        .show()
                 clear()
             }
         }

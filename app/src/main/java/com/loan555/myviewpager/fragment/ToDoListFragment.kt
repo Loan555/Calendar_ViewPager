@@ -1,16 +1,14 @@
 package com.loan555.myviewpager.fragment
 
+import android.annotation.SuppressLint
 import android.app.Dialog
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.*
+import android.widget.*
 import androidx.fragment.app.Fragment
-import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.TextView
-import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.fragment.app.commit
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -23,16 +21,22 @@ import com.loan555.myviewpager.model.CalendarDateModel
 import com.loan555.myviewpager.model.DataNoteItem
 import com.loan555.myviewpager.model.DataNoteList
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.fragment_detail.*
+import kotlinx.android.synthetic.main.fragment_home.*
 import kotlinx.android.synthetic.main.fragment_to_do_list.*
+import kotlinx.android.synthetic.main.fragment_to_do_list.btn_add
 import kotlinx.android.synthetic.main.itempager.*
 import java.text.SimpleDateFormat
 import java.util.*
 
-var mDataNoteList = DataNoteList("resource")
+class ToDoListFragment(var listData: DataNoteList) : Fragment(),
+    RecyclerNoteAdapter.OnItemClickListener {
 
-class ToDoListFragment : Fragment(), RecyclerNoteAdapter.OnItemClickListener {
+    var adapter = RecyclerNoteAdapter(listData, this)
+    var textSearch: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setHasOptionsMenu(true)
         super.onCreate(savedInstanceState)
     }
 
@@ -51,14 +55,35 @@ class ToDoListFragment : Fragment(), RecyclerNoteAdapter.OnItemClickListener {
 
         printList()
         initRecyclerView()
-        eventSwipedRecyclerView()
+//        eventSwipedRecyclerView()
         eventBtnAdd()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.mymenu, menu)
+        val search = menu?.findItem(R.id.menu_search)
+        val searchView = search?.actionView as SearchView
+        searchView.queryHint = "Search"
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                Log.d("aaa", "search list submit")
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                textSearch = newText
+                adapter.filter.filter(newText)
+                return false
+            }
+
+        })
+
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
     private fun eventBtnAdd() {
         btn_add.setOnClickListener {
-            showDialog(CalendarDateModel(Calendar.getInstance().time))
+            showDialog(CalendarDateModel(Calendar.getInstance().time, true))
         }
     }
 
@@ -75,20 +100,14 @@ class ToDoListFragment : Fragment(), RecyclerNoteAdapter.OnItemClickListener {
         val textDate = dialog.findViewById(R.id.textDate) as TextView
         val editEventBody = dialog.findViewById(R.id.editTextBody) as EditText
         val editEventName = dialog.findViewById(R.id.name_event_dialog) as EditText
-
         textDate.text = SimpleDateFormat("dd/MM/yyyy").format(date.data.time)
 
         saveBtn.setOnClickListener {
             val eName = editEventName.text.toString()
             val eBody = editEventBody.text.toString()
             if (eName != "" && eBody != "") {
-
-                Log.d(
-                    "aaa",
-                    "ban vua them $eName - $eBody - ${SimpleDateFormat("d MMMM yyyy").format(date.data.time)}"
-                )
-                val id = mDataNoteList.getNewId()
-                mDataNoteList.addItem(
+                val id: Long = 0
+                val positionAdd = listData.addItem(
                     DataNoteItem(
                         id,
                         date,
@@ -96,15 +115,20 @@ class ToDoListFragment : Fragment(), RecyclerNoteAdapter.OnItemClickListener {
                         eBody
                     )
                 ) // khong nen cho bien toan cuc vao day
-                mDataNoteList.sortByDateDescending()
+                if (positionAdd != -1) {// neu add duoc
+                    recycler_listNote.adapter?.notifyItemInserted(positionAdd)
+                    recycler_listNote.layoutManager?.scrollToPosition(positionAdd)
+                    if (textSearch != null) {
+                        adapter.filter.filter(textSearch)
+                    }
 
-                dialog.dismiss()
-
-                Toast.makeText(
-                    this.context,
-                    "Success id = $id",
-                    Toast.LENGTH_SHORT
-                ).show()
+                    dialog.dismiss()
+                    Toast.makeText(
+                        this.context,
+                        "Success id = $positionAdd",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
         closeBtn.setOnClickListener {
@@ -114,14 +138,14 @@ class ToDoListFragment : Fragment(), RecyclerNoteAdapter.OnItemClickListener {
         detailBtn.setOnClickListener {
             dialog.dismiss()
             Toast.makeText(this.requireContext(), "go to detail", Toast.LENGTH_SHORT).show()
-            val id = mDataNoteList.getNewId()
+            val id = listData.getNewId()
             val eName = editEventName.text.toString()
             val eBody = editEventBody.text.toString()
             val item = DataNoteItem(id, date, eName, eBody)
 
             val bundle = Bundle()
             bundle.putSerializable(NOTE, item)
-            val detailFragment = DetailFragment()
+            val detailFragment = DetailFragment(listData)
             detailFragment.arguments = bundle
 
             activity?.supportFragmentManager?.commit {
@@ -129,6 +153,85 @@ class ToDoListFragment : Fragment(), RecyclerNoteAdapter.OnItemClickListener {
                 setReorderingAllowed(true)
                 addToBackStack(DETAIL_TAG)
             }
+        }
+
+        dialog.show()
+    }
+
+    @SuppressLint("SetTextI18n", "SimpleDateFormat")
+    @RequiresApi(Build.VERSION_CODES.N)
+    private fun showDialogAction(item: DataNoteItem) {
+        val dialog = Dialog(this.requireContext())
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.action_dialog)
+
+        val closeBtn = dialog.findViewById(R.id.btn_close_dialog) as ImageButton
+        val updateBtn = dialog.findViewById(R.id.btn_update_dialog) as TextView
+        val detailBtn = dialog.findViewById(R.id.btn_detail_dialog) as TextView
+        val deleteBtn = dialog.findViewById(R.id.btn_delete_dialog) as TextView
+        val textDate = dialog.findViewById(R.id.textDate) as TextView
+        val textTitle = dialog.findViewById(R.id.name_dialog) as TextView
+        val editEventBody = dialog.findViewById(R.id.editTextBody) as EditText
+        val editEventName = dialog.findViewById(R.id.name_event_dialog) as EditText
+
+        textTitle.text = "id: ${item.noteId}"
+        textDate.text = SimpleDateFormat("dd/MM/yyyy").format(item.date.data)
+        editEventName.setText(item.titleHead)
+        editEventBody.setText(item.titleBody)
+
+        updateBtn.setOnClickListener {
+            val eName = editEventName.text.toString()
+            val eBody = editEventBody.text.toString()
+            if (eName != "" && eBody != "") {
+                val id: Long = 0
+                val positionUpdate = listData.updateItem(
+                    DataNoteItem(
+                        id,
+                        item.date,
+                        eName,
+                        eBody
+                    )
+                ) // khong nen cho bien toan cuc vao day
+                if (positionUpdate != -1) {// neu add duoc
+                    recycler_listNote.adapter?.notifyItemInserted(positionUpdate)
+                    recycler_listNote.layoutManager?.scrollToPosition(positionUpdate)
+                    if (textSearch != null) {
+                        adapter.filter.filter(textSearch)
+                    }
+
+                    dialog.dismiss()
+                    Toast.makeText(
+                        this.context,
+                        "Success id = $positionUpdate",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+        closeBtn.setOnClickListener {
+            dialog.dismiss()
+            Toast.makeText(this.requireContext(), "Cancel", Toast.LENGTH_SHORT).show()
+        }
+        detailBtn.setOnClickListener {
+            dialog.dismiss()
+            val bundle = Bundle()
+            bundle.putSerializable(NOTE, item)
+            val detailFragment = DetailFragment(listData)
+            detailFragment.arguments = bundle
+
+            activity?.supportFragmentManager?.commit {
+                replace(R.id.fragment_view_main, detailFragment)
+                setReorderingAllowed(true)
+                addToBackStack(DETAIL_TAG)
+            }
+        }
+        deleteBtn.setOnClickListener {
+            dialog.dismiss()
+            val itemRemoved = listData.deleteItem(item)
+            if (textSearch != null)
+                adapter.filter.filter(textSearch)
+            else adapter.notifyDataSetChanged()
+            Toast.makeText(this.requireContext(), "Delete ", Toast.LENGTH_SHORT).show()
         }
         dialog.show()
     }
@@ -156,11 +259,13 @@ class ToDoListFragment : Fragment(), RecyclerNoteAdapter.OnItemClickListener {
                     ItemTouchHelper.LEFT, ItemTouchHelper.RIGHT -> {
                         Toast.makeText(
                             this@ToDoListFragment.requireContext(),
-                            "Remove ${mDataNoteList.getItem(positionOfData).titleHead}",
+                            "Remove ${listData.getItem(positionOfData).titleHead}",
                             Toast.LENGTH_SHORT
                         ).show()
-                        mDataNoteList.deleteItem(mDataNoteList.getItem(positionOfData).noteId)
+                        listData.deleteItem(listData.getItem(positionOfData))
                         recycler_listNote.adapter?.notifyItemRemoved(positionOfData)
+                        if (textSearch != null)
+                            adapter.filter.filter(textSearch)
                     }
                 }
             }
@@ -169,29 +274,17 @@ class ToDoListFragment : Fragment(), RecyclerNoteAdapter.OnItemClickListener {
     }
 
     private fun printList() {
-        Log.d("aaa", mDataNoteList.listToString())
+        Log.d("aaa", listData.listToString())
     }
 
     private fun initRecyclerView() {
         recycler_listNote.layoutManager =
             LinearLayoutManager(this.context, LinearLayoutManager.VERTICAL, false)
-        recycler_listNote.adapter = RecyclerNoteAdapter(mDataNoteList, this)
+        recycler_listNote.adapter = adapter
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     override fun onItemClick(v: View?, item: DataNoteItem) {
-        v?.setBackgroundColor(Color.parseColor("#FF03DAC5"))
-
-        val item = DataNoteItem(item.noteId, item.date, item.titleHead, item.titleBody)
-
-        val bundle = Bundle()
-        bundle.putSerializable(NOTE, item)
-        val detailFragment = DetailFragment()
-        detailFragment.arguments = bundle
-
-        activity?.supportFragmentManager?.commit {
-            replace(R.id.fragment_view_main, detailFragment)
-            setReorderingAllowed(true)
-            addToBackStack(DETAIL_TAG)
-        }
+        showDialogAction(item)
     }
 }

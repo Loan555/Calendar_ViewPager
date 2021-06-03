@@ -10,6 +10,7 @@ import com.loan555.myviewpager.*
 import com.loan555.myviewpager.fragment.HomeFragment
 import com.loan555.myviewpager.model.CalendarDateModel
 import com.loan555.myviewpager.model.DataDateTime
+import com.loan555.myviewpager.model.DataNoteList
 import kotlinx.android.synthetic.main.itempager.view.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -17,14 +18,8 @@ import kotlin.collections.ArrayList
 
 var startDayOfWeek = 0
 
-class ViewPagerAdapter(private var listener: OnInputNote) : RecyclerView.Adapter<ViewPagerVH>(), ItemAdapter.OnItemClickListener {
-    //array of colors to change the background color of screen
-    private val colors = intArrayOf(
-        android.R.color.holo_blue_bright,
-        android.R.color.holo_red_light,
-        android.R.color.holo_blue_dark,
-        android.R.color.holo_purple
-    )
+class ViewPagerAdapter(private var listener: OnInputNote, private var dataNoteList: DataNoteList) : RecyclerView.Adapter<ViewPagerVH>(), ItemAdapter.OnItemClickListener {
+
     lateinit var arrDate: ArrayList<CalendarDateModel> // luu ngay
     private var cal = Calendar.getInstance()
     private var arrDayOfWeek = ArrayList<String>() // luu thu
@@ -39,8 +34,7 @@ class ViewPagerAdapter(private var listener: OnInputNote) : RecyclerView.Adapter
             position -> {
                 cal = Calendar.getInstance()
                 cal.add(Calendar.MONTH, position - startPosition)
-
-                name_item.text = "ViewPager+ $position"
+                // tim danh sach su kien o day
                 mmmm_yyyy.text = SimpleDateFormat("MMMM yyyy").format(cal.time).toString()
                 when(cal.time.month){
                     0,1,2 -> img.setImageResource(R.drawable.xuan)
@@ -49,13 +43,11 @@ class ViewPagerAdapter(private var listener: OnInputNote) : RecyclerView.Adapter
                     else -> img.setImageResource(R.drawable.dong)
                 }
 
-                container.setBackgroundResource(colors[position % 4])
-
                 /**Lay du lieu cho thang
                  *
                  */
 
-                var mDataDateTime = DataDateTime()
+                var mDataDateTime = DataDateTime(dataNoteList)
                 arrDate = mDataDateTime.getListForMonth(startDayOfWeek, cal)
                 // hien thi thu
                 setStartDayOdWeek() // khoi tao menu

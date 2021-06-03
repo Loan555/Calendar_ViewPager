@@ -1,48 +1,179 @@
 package com.loan555.myviewpager
 
+import android.Manifest
+import android.app.Activity
 import android.app.Dialog
-import android.os.Build
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.Window
 import android.widget.*
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.fragment.app.commit
-import androidx.fragment.app.replace
 import com.google.android.material.navigation.NavigationView
 import com.loan555.myviewpager.fragment.HomeFragment
 import com.loan555.myviewpager.fragment.ToDoListFragment
-import com.loan555.myviewpager.fragment.mDataNoteList
 import com.loan555.myviewpager.model.AppPreferences
 import com.loan555.myviewpager.model.CalendarDateModel
 import com.loan555.myviewpager.model.DataNoteItem
+import com.loan555.myviewpager.model.DataNoteList
+import com.opencsv.CSVReader
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.fragment_home.*
+import kotlinx.android.synthetic.main.fragment_to_do_list.*
+import java.io.File
+import java.io.FileReader
+import java.io.FileWriter
+import java.io.Reader
+import java.text.SimpleDateFormat
 import java.util.*
 
 const val HOME_TAG = "home"
 const val LIST_TAG = "list"
 const val DETAIL_TAG = "detail"
 
-var lastSelectDateTime = CalendarDateModel(Calendar.getInstance().time)
+var lastSelectDateTime = CalendarDateModel(Calendar.getInstance().time, false)
 var startPosition = 500
 var currentPosition = startPosition
-var lastDoubleTabPosition = CalendarDateModel(Calendar.getInstance().time)
+var lastDoubleTabPosition = CalendarDateModel(Calendar.getInstance().time, false)
 var dayToChose = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
 class MainActivity : AppCompatActivity() {
+    private var dataNoteList = DataNoteList(this)
+
+    /*---------For storage permission---------- */
+    private val STORAGE_REQUEST_CODE_EXPORT = 1
+    private val STORAGE_REQUEST_CODE_IMPORT = 2
+    lateinit var storagePermission: Array<String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        dataNoteList.readToList() // read data to List
         initToolbar()
-        initBody()
         initDrawLayout()
-        eventDrawLayout()
+        initBody()
+        storagePermission = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    }
+
+    private fun code(str: String): String {
+        var codeText = ""
+        str.forEach {
+            codeText += (it.toInt() + 45).toChar()
+        }
+        return codeText
+    }
+
+    private fun encode(str: String): String {
+        var encodeText = ""
+        str.forEach {
+            encodeText += (it.toInt() - 45).toChar()
+        }
+        return encodeText
+    }
+
+    private fun checkStoragePermission(): Boolean {
+        Log.e("permission", "check permission")
+        return ContextCompat.checkSelfPermission(
+            this,
+            android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ) == (PackageManager.PERMISSION_GRANTED)
+    }
+
+    private fun requestStoragePermissionImport() {
+        ActivityCompat.requestPermissions(this, storagePermission, STORAGE_REQUEST_CODE_IMPORT)
+    }
+
+    private fun requestStoragePermissionExport() {
+        Log.e("permission", "request export permission")
+        ActivityCompat.requestPermissions(this, storagePermission, STORAGE_REQUEST_CODE_EXPORT)
+    }
+
+    private fun exportCSV() {
+        val folder =
+            File("${Environment.getExternalStorageDirectory()}/SQLiteBackup") //SQLiteBackup is folder name
+        var isFolderCreated = false
+        if (!folder.exists())
+            isFolderCreated = folder.mkdir()
+        Log.e("permission", "exportCSV $isFolderCreated")
+        //file name
+        val csvFileName = "SQLite_Backup.csv"
+        //complete path and name
+        val filePathAndName = "$folder/$csvFileName"
+        //get records
+        try {
+            //write csv file
+            var fw = FileWriter(filePathAndName)
+            dataNoteList.getList().forEach {
+                fw.append(it.noteId.toString())
+                fw.append(",")
+                fw.append(SimpleDateFormat("yyyy/MM/dd").format(it.date.data))
+                fw.append(",")
+                fw.append(code(it.titleHead))
+                fw.append(",")
+                fw.append(code(it.titleBody))
+                fw.append("\n")
+            }
+            fw.flush()
+            fw.close()
+            Toast.makeText(this, "Backup exported to: $filePathAndName", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Backup error: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun importCSV() {
+        //use same path and file name to import
+        val folderPathAndName =
+            "${Environment.getExternalStorageDirectory()}/SQLiteBackup/SQLite_Backup.csv"
+        var csvFile = File(folderPathAndName)
+        if (csvFile.exists()) {
+            try {
+                dataNoteList.clear()
+                csvFile.forEachLine { it ->
+                    var column = 0
+                    var ids = ""
+                    var date = ""
+                    var titleHead = ""
+                    var titleBody = ""
+                    it.forEach {
+                        if (it == ',') {
+                            column++
+                            return@forEach
+                        }
+                        when (column) {
+                            0 -> ids += it
+                            1 -> date += it
+                            2 -> titleHead += it
+                            3 -> titleBody += it
+                        }
+                    }
+                    val mDataNoteItem = DataNoteItem(
+                        ids.toLong(),
+                        CalendarDateModel(SimpleDateFormat("yyyy/MM/dd").parse(date), true),
+                        encode(titleHead),
+                        encode(titleBody)
+                    )
+                    dataNoteList.addItem(mDataNoteItem)
+                }
+                Toast.makeText(this, "Backup restore... ", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(this, "Import error: ${e.message} ", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun initToolbar() {
+        setSupportActionBar(action_toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_menu_24)
     }
 
     private fun initDrawLayout() {
@@ -54,8 +185,29 @@ class MainActivity : AppCompatActivity() {
         var name: TextView = viewHeader.findViewById(R.id.nav_header_textView)
         AppPreferences.init(this)
         name.text = AppPreferences.userName
+
+        draw_layout_menu.setNavigationItemSelectedListener {
+            it.isChecked = true
+            draw_layout.closeDrawers()
+            when (it.itemId) {
+                R.id.nav_home -> {
+                    goToHome()
+                }
+                R.id.nav_list_to_do -> {
+                    goToList()
+                }
+            }
+            true
+        }
     }
 
+    private fun initBody() {
+        goToHome() // home is start
+    }
+
+    /**
+     * Dialog will show to reset password
+     */
     private fun showDialog() {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -89,15 +241,12 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun initBody() {
-        goToHome()
-    }
-
     private fun goToHome() {
         // neu chua co thi tao moi, co roi thi back lai
         if (supportFragmentManager.backStackEntryCount <= 0) {
             supportFragmentManager.commit {
-                replace<HomeFragment>(R.id.fragment_view_main)
+                val homeFragment = HomeFragment(dataNoteList)
+                replace(R.id.fragment_view_main, homeFragment)
                 setReorderingAllowed(true)
                 addToBackStack(HOME_TAG)
             }
@@ -105,7 +254,6 @@ class MainActivity : AppCompatActivity() {
             supportFragmentManager.popBackStack(HOME_TAG, 0)
         }
         draw_layout_menu.menu.findItem(R.id.nav_home).isChecked = true
-        printBackStack()
     }
 
     private fun goToList() {
@@ -117,91 +265,22 @@ class MainActivity : AppCompatActivity() {
             }
         }
         supportFragmentManager.commit {
-            replace<ToDoListFragment>(R.id.fragment_view_main)
+            val mToDoListFragment = ToDoListFragment(dataNoteList)
+            replace(R.id.fragment_view_main, mToDoListFragment)
             setReorderingAllowed(true)
             addToBackStack(LIST_TAG)
         }
         draw_layout_menu.menu.findItem(R.id.nav_list_to_do).isChecked = true
-        printBackStack()
     }
 
-    private fun printBackStack() {
-        for (i in 0 until supportFragmentManager.backStackEntryCount) {
-            Log.d(
-                "backstack",
-                "back stac at $i = ${supportFragmentManager.getBackStackEntryAt(i).name}"
-            )
-        }
-    }
 
-    private fun eventDrawLayout() {
-        draw_layout_menu.setNavigationItemSelectedListener {
-            it.isChecked = true
-            draw_layout.closeDrawers()
-            when (it.itemId) {
-                R.id.nav_home -> {
-                    goToHome()
-                }
-                R.id.nav_list_to_do -> {
-                    goToList()
-                }
-            }
-            true
-        }
-    }
-
-    private fun initToolbar() {
-        setSupportActionBar(action_toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.setHomeAsUpIndicator(R.drawable.ic_baseline_menu_24)
+    override fun onDestroy() {
+        dataNoteList.closeDatabase() // close database when app close
+        super.onDestroy()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.mymenu , menu)
-        Log.d("aaa", "chay den day diiiiiiiiii")
-
-        val search = menu?.findItem(R.id.menu_search)
-        val searchView = search?.actionView as SearchView
-        searchView.queryHint = "Search"
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-               return when (supportFragmentManager.getBackStackEntryAt(supportFragmentManager.backStackEntryCount - 1).name) {
-                    HOME_TAG -> {
-                        Log.d("aaa", "search home submit")
-                        true
-                    }
-                    LIST_TAG ->{
-                        Log.d("aaa", "search list submit")
-                        true
-                    }
-                    DETAIL_TAG -> {
-                        Log.d("aaa", "search detail submit")
-                        true
-                    }
-                   else -> false
-                }
-
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                return when (supportFragmentManager.getBackStackEntryAt(supportFragmentManager.backStackEntryCount - 1).name) {
-                    HOME_TAG -> {
-                        Log.d("aaa", "search home change")
-                        true
-                    }
-                    LIST_TAG ->{
-                        Log.d("aaa", "search list change")
-                        true
-                    }
-                    DETAIL_TAG -> {
-                        Log.d("aaa", "search detail change")
-                        true
-                    }
-                    else -> false
-                }
-            }
-        })
-
+        menuInflater.inflate(R.menu.home_toolbar, menu)
         return super.onCreateOptionsMenu(menu)
     }
 
@@ -211,12 +290,30 @@ class MainActivity : AppCompatActivity() {
                 draw_layout.openDrawer(GravityCompat.START)
                 true
             }
-            R.id.menu_search -> {
-
+            R.id.menu_backup -> {
+                // back up / export
+                if (checkStoragePermission()) {
+                    //permission allowed
+                    exportCSV()
+                } else {
+                    //permission not allowed
+                    requestStoragePermissionExport()
+                }
                 true
             }
-            R.id.menu_backup -> {
-                // back up
+            R.id.menu_import -> {
+                //import
+                if (checkStoragePermission()) {
+                    //permission allowed
+                    importCSV()
+                    when (supportFragmentManager.getBackStackEntryAt(supportFragmentManager.backStackEntryCount - 1).name) {
+                        HOME_TAG -> view_pager2.adapter?.notifyDataSetChanged()
+                        LIST_TAG -> recycler_listNote.adapter?.notifyDataSetChanged()
+                    }
+                } else {
+                    //permission not allowed
+                    requestStoragePermissionImport()
+                }
                 true
             }
             R.id.menu_reset_pass -> {
@@ -225,10 +322,6 @@ class MainActivity : AppCompatActivity() {
             }
             else -> super.onOptionsItemSelected(item)
         }
-    }
-
-    private fun search(text: String) {
-
     }
 
     override fun onBackPressed() {
@@ -243,24 +336,34 @@ class MainActivity : AppCompatActivity() {
             }
     }
 
-    @RequiresApi(Build.VERSION_CODES.N)
-    private fun initData() {
-        val id = mDataNoteList.getNewId()
-        val cal1 = Calendar.getInstance()
-        for (i in 0..20) {
-            var cal = cal1
-            cal.add(Calendar.DAY_OF_MONTH, Random().nextInt(20))
-            mDataNoteList.addItem(DataNoteItem(id, CalendarDateModel(cal.time), "head", "body"))
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            STORAGE_REQUEST_CODE_EXPORT -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //permission granted
+                    exportCSV()
+                } else {
+                    //permission denied
+                    Toast.makeText(this, "Storage permission required...", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
+            STORAGE_REQUEST_CODE_IMPORT -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //permission granted
+                    importCSV()
+                } else {
+                    //permission denied
+                    Toast.makeText(this, "Storage permission required...", Toast.LENGTH_SHORT)
+                        .show()
+                }
+            }
         }
-        mDataNoteList.addItem(
-            DataNoteItem(
-                id,
-                CalendarDateModel(Calendar.getInstance().time),
-                "head",
-                "body"
-            )
-        )
-        mDataNoteList.sortByDateDescending()
     }
 
 }
