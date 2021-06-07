@@ -7,40 +7,6 @@
     android:padding="10dp">
 
     <TextView
-        app:layout_constraintLeft_toLeftOf="parent"
-        android:id="@+id/btn_delete_dialog"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginRight="40dp"
-        android:text="Delete"
-        android:textColor="@color/teal_200"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintRight_toLeftOf="@id/btn_detail_dialog"
-        app:layout_constraintTop_toBottomOf="@id/editTextBody" />
-
-    <TextView
-        android:id="@+id/btn_detail_dialog"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_marginRight="40dp"
-        android:text="Detail"
-        android:textColor="@color/teal_200"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintRight_toLeftOf="@id/btn_update_dialog"
-        app:layout_constraintTop_toBottomOf="@id/editTextBody" />
-
-    <TextView
-        android:id="@+id/btn_update_dialog"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Update"
-        android:textColor="@color/teal_200"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintRight_toRightOf="parent" />
-
-    <TextView
         android:id="@+id/name_dialog"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -50,6 +16,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
+        android:layout_marginTop="5dp"
         android:id="@+id/textDate"
         android:layout_width="110dp"
         android:layout_height="wrap_content"
@@ -59,7 +26,7 @@
     <EditText
         android:id="@+id/name_event_dialog"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
         android:layout_marginTop="10dp"
         android:ems="10"
         android:hint="Event name"
@@ -68,9 +35,10 @@
         app:layout_constraintTop_toBottomOf="@id/name_dialog" />
 
     <EditText
+        android:layout_marginTop="5dp"
         android:id="@+id/editTextBody"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
         android:ems="10"
         android:gravity="start|top"
         android:hint="Event detail"
@@ -86,5 +54,29 @@
         android:src="@drawable/ic_baseline_close_24"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        app:layout_constraintTop_toBottomOf="@id/editTextBody"
+        android:id="@+id/btn_detail_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginRight="40dp"
+        android:text="Detail"
+        android:textColor="@color/teal_200"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintRight_toRightOf="parent"/>
+
+    <TextView
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:id="@+id/btn_delete_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginRight="40dp"
+        android:text="Delete"
+        android:textColor="@color/teal_200"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintRight_toLeftOf="@id/btn_detail_dialog"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

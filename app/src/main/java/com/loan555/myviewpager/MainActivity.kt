@@ -1,173 +1,91 @@
 package com.loan555.myviewpager
 
 import android.Manifest
-import android.app.Activity
+import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Environment
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.Window
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.fragment.app.commit
 import com.google.android.material.navigation.NavigationView
 import com.loan555.myviewpager.fragment.HomeFragment
 import com.loan555.myviewpager.fragment.ToDoListFragment
-import com.loan555.myviewpager.model.AppPreferences
-import com.loan555.myviewpager.model.CalendarDateModel
-import com.loan555.myviewpager.model.DataNoteItem
-import com.loan555.myviewpager.model.DataNoteList
-import com.opencsv.CSVReader
+import com.loan555.myviewpager.model.*
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_home.*
 import kotlinx.android.synthetic.main.fragment_to_do_list.*
-import java.io.File
-import java.io.FileReader
-import java.io.FileWriter
-import java.io.Reader
-import java.text.SimpleDateFormat
+import kotlinx.coroutines.*
 import java.util.*
+import kotlin.coroutines.CoroutineContext
 
 const val HOME_TAG = "home"
 const val LIST_TAG = "list"
 const val DETAIL_TAG = "detail"
+const val startPosition = 500
 
 var lastSelectDateTime = CalendarDateModel(Calendar.getInstance().time, false)
-var startPosition = 500
-var currentPosition = startPosition
-var lastDoubleTabPosition = CalendarDateModel(Calendar.getInstance().time, false)
-var dayToChose = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+var lastDoubleTabPosition = lastSelectDateTime
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), CoroutineScope {
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main + job
+    private lateinit var job: Job
+
     private var dataNoteList = DataNoteList(this)
+    private val storagePermission = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+    private val mBackupData = BackupData(this, this, storagePermission, dataNoteList)
 
-    /*---------For storage permission---------- */
-    private val STORAGE_REQUEST_CODE_EXPORT = 1
-    private val STORAGE_REQUEST_CODE_IMPORT = 2
-    lateinit var storagePermission: Array<String>
-
+    @SuppressLint("WrongThread")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        job = Job()
         setContentView(R.layout.activity_main)
 
-        dataNoteList.readToList() // read data to List
         initToolbar()
         initDrawLayout()
         initBody()
-        storagePermission = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-    }
-
-    private fun code(str: String): String {
-        var codeText = ""
-        str.forEach {
-            codeText += (it.toInt() + 45).toChar()
-        }
-        return codeText
-    }
-
-    private fun encode(str: String): String {
-        var encodeText = ""
-        str.forEach {
-            encodeText += (it.toInt() - 45).toChar()
-        }
-        return encodeText
-    }
-
-    private fun checkStoragePermission(): Boolean {
-        Log.e("permission", "check permission")
-        return ContextCompat.checkSelfPermission(
-            this,
-            android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-        ) == (PackageManager.PERMISSION_GRANTED)
-    }
-
-    private fun requestStoragePermissionImport() {
-        ActivityCompat.requestPermissions(this, storagePermission, STORAGE_REQUEST_CODE_IMPORT)
-    }
-
-    private fun requestStoragePermissionExport() {
-        Log.e("permission", "request export permission")
-        ActivityCompat.requestPermissions(this, storagePermission, STORAGE_REQUEST_CODE_EXPORT)
-    }
-
-    private fun exportCSV() {
-        val folder =
-            File("${Environment.getExternalStorageDirectory()}/SQLiteBackup") //SQLiteBackup is folder name
-        var isFolderCreated = false
-        if (!folder.exists())
-            isFolderCreated = folder.mkdir()
-        Log.e("permission", "exportCSV $isFolderCreated")
-        //file name
-        val csvFileName = "SQLite_Backup.csv"
-        //complete path and name
-        val filePathAndName = "$folder/$csvFileName"
-        //get records
-        try {
-            //write csv file
-            var fw = FileWriter(filePathAndName)
-            dataNoteList.getList().forEach {
-                fw.append(it.noteId.toString())
-                fw.append(",")
-                fw.append(SimpleDateFormat("yyyy/MM/dd").format(it.date.data))
-                fw.append(",")
-                fw.append(code(it.titleHead))
-                fw.append(",")
-                fw.append(code(it.titleBody))
-                fw.append("\n")
-            }
-            fw.flush()
-            fw.close()
-            Toast.makeText(this, "Backup exported to: $filePathAndName", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            Toast.makeText(this, "Backup error: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun importCSV() {
-        //use same path and file name to import
-        val folderPathAndName =
-            "${Environment.getExternalStorageDirectory()}/SQLiteBackup/SQLite_Backup.csv"
-        var csvFile = File(folderPathAndName)
-        if (csvFile.exists()) {
+        //doc du lieu
+        GlobalScope.launch(Dispatchers.Main) {
             try {
-                dataNoteList.clear()
-                csvFile.forEachLine { it ->
-                    var column = 0
-                    var ids = ""
-                    var date = ""
-                    var titleHead = ""
-                    var titleBody = ""
-                    it.forEach {
-                        if (it == ',') {
-                            column++
-                            return@forEach
-                        }
-                        when (column) {
-                            0 -> ids += it
-                            1 -> date += it
-                            2 -> titleHead += it
-                            3 -> titleBody += it
-                        }
-                    }
-                    val mDataNoteItem = DataNoteItem(
-                        ids.toLong(),
-                        CalendarDateModel(SimpleDateFormat("yyyy/MM/dd").parse(date), true),
-                        encode(titleHead),
-                        encode(titleBody)
-                    )
-                    dataNoteList.addItem(mDataNoteItem)
+                val data = async(Dispatchers.IO) {
+                    dataNoteList.readToList()                // read data to List
                 }
-                Toast.makeText(this, "Backup restore... ", Toast.LENGTH_SHORT).show()
+                // load lai du lieu ngay khi doc xong
+                reload(data.await())
             } catch (e: Exception) {
-                Toast.makeText(this, "Import error: ${e.message} ", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error read data: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
+    }
+
+    private fun checkCurrentFragment(): Int {
+        return when (supportFragmentManager.getBackStackEntryAt(supportFragmentManager.backStackEntryCount - 1).name) {
+            HOME_TAG -> 1
+            LIST_TAG -> 2
+            DETAIL_TAG -> 3
+            else -> 0
+        }
+    }
+
+    private fun reload(size: Int) {
+        when (checkCurrentFragment()) {
+            1 -> {
+                view_pager2.adapter?.notifyItemChanged(view_pager2.currentItem)
+            }
+            2 -> {
+                recycler_listNote.adapter?.notifyDataSetChanged()
+            }
+        }
+        Toast.makeText(this, "list size = $size", Toast.LENGTH_LONG).show()
     }
 
     private fun initToolbar() {
@@ -273,9 +191,9 @@ class MainActivity : AppCompatActivity() {
         draw_layout_menu.menu.findItem(R.id.nav_list_to_do).isChecked = true
     }
 
-
     override fun onDestroy() {
         dataNoteList.closeDatabase() // close database when app close
+        job.cancel()
         super.onDestroy()
     }
 
@@ -292,27 +210,38 @@ class MainActivity : AppCompatActivity() {
             }
             R.id.menu_backup -> {
                 // back up / export
-                if (checkStoragePermission()) {
+                if (mBackupData.checkStoragePermission()) {
                     //permission allowed
-                    exportCSV()
+                    mBackupData.exportCSV()
                 } else {
                     //permission not allowed
-                    requestStoragePermissionExport()
+                    mBackupData.requestStoragePermissionExport()
                 }
                 true
             }
             R.id.menu_import -> {
                 //import
-                if (checkStoragePermission()) {
+                if (mBackupData.checkStoragePermission()) {
                     //permission allowed
-                    importCSV()
-                    when (supportFragmentManager.getBackStackEntryAt(supportFragmentManager.backStackEntryCount - 1).name) {
-                        HOME_TAG -> view_pager2.adapter?.notifyDataSetChanged()
-                        LIST_TAG -> recycler_listNote.adapter?.notifyDataSetChanged()
+                    GlobalScope.launch(Dispatchers.Main) {
+                        val messageResult = async(Dispatchers.IO) { mBackupData.importCSV() }
+                        Toast.makeText(
+                            this@MainActivity,
+                            "${messageResult.await()}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        if (messageResult.await()
+                                .contains("success")
+                        ) {// neu thanh cong thi load lai
+                            when (supportFragmentManager.getBackStackEntryAt(supportFragmentManager.backStackEntryCount - 1).name) {
+                                HOME_TAG -> view_pager2.adapter?.notifyDataSetChanged()
+                                LIST_TAG -> recycler_listNote.adapter?.notifyDataSetChanged()
+                            }
+                        }
                     }
                 } else {
                     //permission not allowed
-                    requestStoragePermissionImport()
+                    mBackupData.requestStoragePermissionImport()
                 }
                 true
             }
@@ -330,7 +259,7 @@ class MainActivity : AppCompatActivity() {
         } else
             when (supportFragmentManager.getBackStackEntryAt(supportFragmentManager.backStackEntryCount - 1).name) {
                 LIST_TAG -> goToHome()
-                DETAIL_TAG -> goToList()
+                DETAIL_TAG -> supportFragmentManager.popBackStack()
                 HOME_TAG -> finish()
                 else -> super.onBackPressed()
             }
@@ -346,7 +275,7 @@ class MainActivity : AppCompatActivity() {
             STORAGE_REQUEST_CODE_EXPORT -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     //permission granted
-                    exportCSV()
+                    mBackupData.exportCSV()
                 } else {
                     //permission denied
                     Toast.makeText(this, "Storage permission required...", Toast.LENGTH_SHORT)
@@ -356,7 +285,7 @@ class MainActivity : AppCompatActivity() {
             STORAGE_REQUEST_CODE_IMPORT -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     //permission granted
-                    importCSV()
+                    mBackupData.importCSV()
                 } else {
                     //permission denied
                     Toast.makeText(this, "Storage permission required...", Toast.LENGTH_SHORT)

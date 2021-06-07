@@ -55,29 +55,7 @@ class ToDoListFragment(var listData: DataNoteList) : Fragment(),
 
         printList()
         initRecyclerView()
-//        eventSwipedRecyclerView()
         eventBtnAdd()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.mymenu, menu)
-        val search = menu?.findItem(R.id.menu_search)
-        val searchView = search?.actionView as SearchView
-        searchView.queryHint = "Search"
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                Log.d("aaa", "search list submit")
-                return false
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                textSearch = newText
-                adapter.filter.filter(newText)
-                return false
-            }
-
-        })
-
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
@@ -166,7 +144,6 @@ class ToDoListFragment(var listData: DataNoteList) : Fragment(),
         dialog.setContentView(R.layout.action_dialog)
 
         val closeBtn = dialog.findViewById(R.id.btn_close_dialog) as ImageButton
-        val updateBtn = dialog.findViewById(R.id.btn_update_dialog) as TextView
         val detailBtn = dialog.findViewById(R.id.btn_detail_dialog) as TextView
         val deleteBtn = dialog.findViewById(R.id.btn_delete_dialog) as TextView
         val textDate = dialog.findViewById(R.id.textDate) as TextView
@@ -179,35 +156,6 @@ class ToDoListFragment(var listData: DataNoteList) : Fragment(),
         editEventName.setText(item.titleHead)
         editEventBody.setText(item.titleBody)
 
-        updateBtn.setOnClickListener {
-            val eName = editEventName.text.toString()
-            val eBody = editEventBody.text.toString()
-            if (eName != "" && eBody != "") {
-                val id: Long = 0
-                val positionUpdate = listData.updateItem(
-                    DataNoteItem(
-                        id,
-                        item.date,
-                        eName,
-                        eBody
-                    )
-                ) // khong nen cho bien toan cuc vao day
-                if (positionUpdate != -1) {// neu add duoc
-                    recycler_listNote.adapter?.notifyItemInserted(positionUpdate)
-                    recycler_listNote.layoutManager?.scrollToPosition(positionUpdate)
-                    if (textSearch != null) {
-                        adapter.filter.filter(textSearch)
-                    }
-
-                    dialog.dismiss()
-                    Toast.makeText(
-                        this.context,
-                        "Success id = $positionUpdate",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
         closeBtn.setOnClickListener {
             dialog.dismiss()
             Toast.makeText(this.requireContext(), "Cancel", Toast.LENGTH_SHORT).show()
@@ -281,6 +229,44 @@ class ToDoListFragment(var listData: DataNoteList) : Fragment(),
         recycler_listNote.layoutManager =
             LinearLayoutManager(this.context, LinearLayoutManager.VERTICAL, false)
         recycler_listNote.adapter = adapter
+        //scroll to argument
+        if (arguments != null) {
+            val bundle = arguments
+            val data = bundle?.get(NOTE) as DataNoteItem
+            var position = -1
+            for (i in 0 until listData.getSize()) {
+                if (SimpleDateFormat("yyyy/MM/dd").format(listData.getList()[i].date.data) == SimpleDateFormat(
+                        "yyyy/MM/dd"
+                    ).format(data.date.data)
+                ) {
+                    position = i
+                    break
+                }
+            }
+            if (position != -1) {
+                recycler_listNote.scrollToPosition(position)
+            }
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        inflater.inflate(R.menu.mymenu, menu)
+        val search = menu?.findItem(R.id.menu_search)
+        val searchView = search?.actionView as SearchView
+        searchView.queryHint = "Search"
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                Log.d("aaa", "search list submit")
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                textSearch = newText
+                adapter.filter.filter(newText)
+                return false
+            }
+
+        })
     }
 
     @RequiresApi(Build.VERSION_CODES.N)

@@ -7,16 +7,20 @@ import android.os.Build
 import android.provider.BaseColumns
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.annotation.UiThread
+import androidx.annotation.WorkerThread
 import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.collections.ArrayList
 
+@WorkerThread
 @Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
 class DataNoteList(val context: Context) {
     private var dataList = ArrayList<DataNoteItem>()
     private val dbHelper = NoteReaderDbHelper(context)
 
     @SuppressLint("SimpleDateFormat")
-    fun readToList() {
+    fun readToList(): Int {
         val db = dbHelper.readableDatabase
         val projection = arrayOf(
             BaseColumns._ID,
@@ -34,8 +38,8 @@ class DataNoteList(val context: Context) {
             null,
             sortOrder
         )
+        var mDataList = ArrayList<DataNoteItem>()
         with(cursor) {
-            dataList.clear()
             while (moveToNext()) {
                 val itemId = getLong(getColumnIndexOrThrow(BaseColumns._ID))
                 val itemDate = CalendarDateModel(
@@ -54,9 +58,15 @@ class DataNoteList(val context: Context) {
                     itemTitle,
                     itemSubTitle
                 )
-                dataList.add(dataItem)
+                mDataList.add(dataItem)
             }
         }
+        dataList = mDataList
+        return dataList.size
+    }
+
+    fun setData(newDataNoteList: ArrayList<DataNoteItem>){
+        dataList = newDataNoteList
     }
 
     fun addItem(dataNoteItem: DataNoteItem): Int {
@@ -106,6 +116,31 @@ class DataNoteList(val context: Context) {
         return -1
     }
 
+    fun updateItem(newNoteItem: DataNoteItem): Int {
+        // nao ranh viet lai cai nay sau
+        var updateRow = -1
+        dataList.forEach {
+            if (it.noteId == newNoteItem.noteId){
+                it.date = newNoteItem.date
+                it.titleHead = newNoteItem.titleHead
+                it.titleBody = newNoteItem.titleBody
+                val db = dbHelper.writableDatabase
+                val selection = "${BaseColumns._ID} = ?"
+                val selectionArg = arrayOf("${it.noteId}")
+                val values = ContentValues().apply {
+                    put(NoteReaderContract.NoteEntry.COLUMN_DATE,SimpleDateFormat("yyyy/MM/dd").format(newNoteItem.date.data))
+                    put(NoteReaderContract.NoteEntry.COLUMN_NAME_TITLE,newNoteItem.titleHead)
+                    put(NoteReaderContract.NoteEntry.COLUMN_NAME_SUBTITLE,newNoteItem.titleBody)
+                }
+                updateRow =
+                    db?.update(NoteReaderContract.NoteEntry.TABLE_NAME,values,selection,selectionArg)!!
+                Log.e("eee","update item = $it")
+                return@forEach
+            }
+        }
+        return updateRow
+    }
+
     fun deleteItem(dataNoteItem: DataNoteItem): Int {
         val db = dbHelper.writableDatabase
         val selection = "${BaseColumns._ID} = ?"
@@ -122,28 +157,18 @@ class DataNoteList(val context: Context) {
 
     fun getList(): ArrayList<DataNoteItem> = dataList
 
-    fun setList(newList: ArrayList<DataNoteItem>){
-        this.dataList = newList
+    fun getItemByID(ids: Long): DataNoteItem{
+        var result = DataNoteItem(-1, CalendarDateModel(Calendar.getInstance().time,false),"","")
+        dataList.forEach {
+            if (it.noteId == ids) {
+                result = it
+                return@forEach
+            }
+        }
+        return result
     }
 
     fun getSize(): Int = dataList.size
-
-    @RequiresApi(Build.VERSION_CODES.N)
-    fun sortByDateDescending() {
-//        this.dataList.sortedByDescending {
-//            SimpleDateFormat("yyyy/MM/dd").format(it.date.data)
-//        }
-        this.dataList.sortWith(
-            compareBy {
-                SimpleDateFormat("yyyy/MM/dd").format(it.date.data).reversed()
-            }
-        )
-//        this.dataList.sortWith(
-//            compareBy<DataNoteItem> { it.date.data.year }.reversed()
-//                .thenBy { it.date.data.month }.reversed()
-//                .thenBy { it.date.data.date }.reversed()
-//        )
-    }
 
     fun clear() {
         val db = dbHelper.readableDatabase
@@ -164,17 +189,6 @@ class DataNoteList(val context: Context) {
         return if (dataNoteItem == null)
             0
         else (dataNoteItem.noteId + 1)
-    }
-
-    fun updateItem(newNoteItem: DataNoteItem): Int {
-// nao ranh viet lai cai nay sau
-        for (i in 0 until dataList.size) {
-            if (newNoteItem.noteId == dataList[i].noteId) {
-                dataList[i] = newNoteItem
-                return i
-            }
-        }
-        return -1
     }
 
     fun getItem(position: Int): DataNoteItem = dataList[position]

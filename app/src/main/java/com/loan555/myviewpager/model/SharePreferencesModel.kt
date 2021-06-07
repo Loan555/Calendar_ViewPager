@@ -10,7 +10,9 @@ object AppPreferences {
     lateinit var preferences: SharedPreferences
 
     private val PASSWORD = Pair("password", "")
-    private val USER_NAME =Pair("name","")
+    private val USER_NAME = Pair("name", "")
+    private val START_DAY = Pair("startDay", 0)
+
     fun init(context: Context) {
         preferences = context.getSharedPreferences(NAME, MODE)
     }
@@ -28,5 +30,10 @@ object AppPreferences {
         // custom setter to save a preference back to preferences file
         set(value) = preferences.edit {
             this.putString(USER_NAME.first, value)
+        }
+    var startDayOfWeek: Int
+        get() = preferences.getInt(START_DAY.first, START_DAY.second)
+        set(value) = preferences.edit {
+            this.putInt(START_DAY.first, value)
         }
 }

@@ -12,9 +12,8 @@ class DataDateTime(private val dataNoteList: DataNoteList) {
     fun getListForMonth(startDay: Int, cal: Calendar): ArrayList<CalendarDateModel> {
         val monthCalendar = cal.clone() as Calendar
         monthCalendar.set(Calendar.DAY_OF_MONTH, 1)
-        monthCalendar.firstDayOfWeek =
-            startDay// set thu bat dau cho tuan de tinh so tuan trong thang
-        Log.d("aaaa", "ngay dau cua tuan la: ${monthCalendar.firstDayOfWeek}")
+        monthCalendar.firstDayOfWeek = startDay
+        Log.d("aaaa", "thu bat dau cua tuan la: ${monthCalendar.firstDayOfWeek}")
         // lui lai ngay bat dau lay cho list
         while (true) {
             if (monthCalendar.time.day == startDay && monthCalendar.time.date > 0) {
