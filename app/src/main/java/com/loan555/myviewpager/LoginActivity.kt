@@ -11,36 +11,24 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        checkPass()
-        eventBody()
-    }
-
-    private fun checkPass() {
+        setContentView(R.layout.activity_login)
         AppPreferences.init(this)
-        if (AppPreferences.password == "") {
+        val oldPass = AppPreferences.password
+        if (oldPass == "") {
             finish()
             startActivity(Intent(this, MainActivity::class.java))
         } else {
-            setContentView(R.layout.activity_login)
             text_name.text = "Xin chào ${AppPreferences.userName}"
         }
 
-    }
-
-    private fun eventBody() {
         bt_login.setOnClickListener {
-            if (login()) {
+            AppPreferences.init(this)
+            val pass = editTextTextPasswordLogin.text.toString()
+            if (pass == oldPass) {
                 finish()
                 startActivity(Intent(this, MainActivity::class.java))
             }
         }
     }
 
-    private fun login(): Boolean {
-        if (editTextTextPasswordLogin.text.toString() == AppPreferences.password) {
-            return true
-        } else
-            Toast.makeText(this, "Wrong password", Toast.LENGTH_SHORT).show()
-        return false
-    }
 }

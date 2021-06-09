@@ -1,7 +1,6 @@
 package com.loan555.myviewpager
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -40,7 +39,6 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
     private val storagePermission = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
     private val mBackupData = BackupData(this, this, storagePermission, dataNoteList)
 
-    @SuppressLint("WrongThread")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         job = Job()
@@ -224,7 +222,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 if (mBackupData.checkStoragePermission()) {
                     //permission allowed
                     GlobalScope.launch(Dispatchers.Main) {
-                        val messageResult = async(Dispatchers.IO) { mBackupData.importCSV() }
+                        val messageResult = async(Dispatchers.IO) {
+                            return@async mBackupData.importCSV()
+                        }
                         Toast.makeText(
                             this@MainActivity,
                             "${messageResult.await()}",

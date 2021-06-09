@@ -213,7 +213,7 @@ class HomeFragment(var dataNoteList: DataNoteList) : Fragment(), AdapterView.OnI
             picker.dismiss()
             lastSelectDateTime = CalendarDateModel(mDate, false)
             view_pager2.currentItem =
-                startPosition - (y - mDate.year) * 12 - (m - mDate.month)
+                startPosition - (y - mDate.year + 1) * 12 - (m - mDate.month)
             Toast.makeText(this.context, "go to date ${view_pager2.currentItem} : $mDate", Toast.LENGTH_SHORT).show()
         }
         btnCane.setOnClickListener {

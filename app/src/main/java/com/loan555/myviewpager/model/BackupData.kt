@@ -20,7 +20,6 @@ import java.text.SimpleDateFormat
 const val STORAGE_REQUEST_CODE_EXPORT = 1
 const val STORAGE_REQUEST_CODE_IMPORT = 2
 
-@WorkerThread
 class BackupData(
     private val activity: Activity,
     private val context: Context,
@@ -105,6 +104,8 @@ class BackupData(
     }
 
     fun importCSV(): String {
+
+        Thread.sleep(10000)
         // cho nay khong dung coroutin vi con load lai du lieu, dung coroutin de goi ham nay
         var message = ""
         //use same path and file name to import

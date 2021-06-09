@@ -13,8 +13,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 
-@WorkerThread
-@Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
 class DataNoteList(val context: Context) {
     private var dataList = ArrayList<DataNoteItem>()
     private val dbHelper = NoteReaderDbHelper(context)
